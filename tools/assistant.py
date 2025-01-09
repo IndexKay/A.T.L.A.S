@@ -1,3 +1,4 @@
+import os
 import ollama
 import chromadb
 import psycopg
@@ -5,31 +6,26 @@ import ast
 from tqdm import tqdm
 from psycopg.rows import dict_row
 
-# VIDEO : 22:10 function
+from utils.LLM import systems
+convo = systems.Conversation # Array for the user and assistant current conversation
 
-main_model = 'ATLAS:v0.2'
-sub_model = 'llama3.2'
-embedding_model = 'nomic-embed-text'
+from dotenv import load_dotenv
+load_dotenv()
 
 client = chromadb.Client() # Start the vector Database on my PC
 
-#system prompt for RAG (vector/postgres databases)
-system_prompt = (
-    'You are an AI assistant that has memory of every conversation you have ever had with this user.'
-    'On every prompt from the user, the system has checked for any relevant messages you have had with the user.'
-    'If any embedded previous conversations are attached, use them for context for responding to the user,'
-    'if the context is relevant and useful to responding. If the recalled conversations is irrelevant,'
-    'disregard speaking about them and respond normally as an AI assistant. Do not talk about recalling conversations. '
-    'Just use any useful data from the pervious conversations and respond normally as an intelligent AI assistant.'
-)
-convo = [] # Array for the user and assistant current conversation
+
+main_model = 'ATLAS:v0.2'
+agent_model = 'llama3.2'
+embedding_model = 'nomic-embed-text'
+
 
 DB_PARAMS = { # PostgresSQL parameters for connecting to database
-    'dbname': 'memory_agent',
-    'user': 'atlas',
-    'password': 'April1203',
-    'host': 'localhost',
-    'port': '5432'
+    'dbname': os.getenv('PG_DBNAME'),
+    'user': os.getenv('PG_USER'),
+    'password': os.getenv('PG_PASSWORD'),
+    'host': os.getenv('PG_Host'),
+    'port': os.getenv('PG_PORT')
 }
 
 # Connecting to the postgres database
@@ -173,7 +169,7 @@ def create_queries(prompt):
         {'role': 'user', 'content': prompt}
     ]
 
-    response = ollama.chat(model=sub_model, messages=query_convo) # running the model for query generation
+    response = ollama.chat(model=agent_model, messages=query_convo) # running the model for query generation
     print(f"\nVector database queries: {response['message']['content']} \n") # Print query response
 
     try: 
@@ -205,7 +201,7 @@ def classify_embedding(query, context):
         {'role': 'user', 'content': f"SEARCH QUERY: {query} \n\nEMBEDDED CONTEXT: {context}"}
     ]
 
-    response = ollama.chat(model=sub_model, messages=classify_convo)
+    response = ollama.chat(model=agent_model, messages=classify_convo)
 
     return response['message']['content'].strip().lower()
 
