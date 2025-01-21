@@ -6,6 +6,7 @@ from systems import Meta_Classes
 from chromadb.config import Settings
 from psycopg2.extras import RealDictCursor
 
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -87,7 +88,7 @@ class PostgresBackUpDatabase:
             create_table_query = f"""
             CREATE TABLE IF NOT EXISTS {name} (
                 id SERIAL PRIMARY KEY,
-                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 prompt TEXT NOT NULL,
                 response TEXT NOT NULL
             );
@@ -113,13 +114,12 @@ class PostgresBackUpDatabase:
         if self.connection:
             self.connection.close() 
 
-
 class MemoryDatabase:
     def __init__(self):
         # Name of the collection in our vector data
         self.collection_name = 'MEMORIES'
         # Defining the directory of out DB 
-        self.vectorDB = chromadb.PersistentClient(path="./utils/DB")
+        self.vectorDB = chromadb.PersistentClient(path="./utils/DB", settings=Settings(allow_reset = True))
         # Check if Database is already created 
         self.col_exists = True
         # initializing the postgres database
@@ -134,7 +134,7 @@ class MemoryDatabase:
 
             # Check if the collection is empty
             if coll.get()["documents"]:
-                print("*Collection is not empty*")
+                print("*This Collection has context*")
             else:
                 raise ValueError("*Database Collection is empty*")
 
@@ -188,7 +188,16 @@ class MemoryDatabase:
 
                             # Creates the array for the metadata
                             metadata = self.backupDB.fetch_metadata(Table=class_type['className'], columns_to_include=meta_tags)
-                            metadata.append({"Class": class_type['className']})
+                            # Add Class Name to the vector
+                            metadata[0]['Class'] = class_type['className']
+
+                            # Fixing timestamp:
+                            dt = metadata[0]['created']
+                            # Format the datetime object into a timestamp string
+                            timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S.%f %z')
+                            # Updating to timestamp string 
+                            metadata[0]['created'] = timestamp_str
+
                             print("MetaData:", metadata)
 
                             # Adding the query to the database
@@ -211,12 +220,41 @@ class MemoryDatabase:
                 print("*The vector database is already created*")
                 pass
 
+    def VectorDB_Reset(self):
+        pw = input("Enter Security Key: ")
+
+        if pw == os.getenv('RESET_KEY'): # Make reset key in .env file
+            try:
+                self.vectorDB.heartbeat()
+                self.vectorDB.reset()
+                print("The Reset was Complete.")
+            except ValueError as e:
+                print("There was an error with the Vector DB Reset:", e)
+        else:
+            print("This key was invalid")
+        
 
 # Usage Example 
 if __name__ == "__main__":
 
-    try:
+    tester = input("Which test would you like to run?: \n")
+#----------------------------------------------------------
+    if tester == 'startup':
+        try:
+            memory = MemoryDatabase()
+            memory.Initialization()
+        except ValueError as e:
+            print("An exception occurred: ", e)
+#----------------------------------------------------------
+    elif tester == 'create tables':
+        try:
+            db = PostgresBackUpDatabase()
+            db.connect()
+            db.create_class_tables()
+            db.close()
+        except ValueError as e:
+            print("An exception occurred: ", e)
+#----------------------------------------------------------    
+    elif tester == 'reset':
         memory = MemoryDatabase()
-        memory.Initialization()
-    except ValueError as e:
-        print("An exception occurred: ", e)
+        memory.VectorDB_Reset()
