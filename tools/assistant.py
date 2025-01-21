@@ -6,7 +6,7 @@ import ast
 from tqdm import tqdm
 from psycopg.rows import dict_row
 
-from utils.LLM import systems
+from utils import systems
 convo = systems.Conversation # Array for the user and assistant current conversation
 
 from dotenv import load_dotenv
