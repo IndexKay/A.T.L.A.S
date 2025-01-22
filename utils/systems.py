@@ -22,6 +22,8 @@ class CreatorData:
 
         Purpose:To serve as a personalized knowledge hub for the creator’s work, making it easy to access important details about ongoing projects, technical skills, or inspirations.
 
+        Identity:The name if the Creator is Kavin Lajara so anything having to do with this person should be stored in this knowledge base
+        
         Example Entries:
         "Project: Graphical Interface Tool for NASA HUNCH Program."
         "Skill: Proficient in Remix.js, Fusion 360, and Python."
@@ -247,22 +249,11 @@ class Query_Agent:
         self.user = userPrompt
         self.prompt = (
             f"""
-                You are a highly specialized Query Agent designed to generate first-principle reasoning search queries. 
-                Your role is to create a Python list of search queries that will be run on an embeddings database containing 
-                the complete history of conversations you have had with the user. These queries should retrieve any necessary 
-                data required to provide an accurate, context-aware response to the user's input. 
-
-                Follow these instructions strictly:
-                - Analyze the user's prompt to identify gaps in context or information that may need to be retrieved from the database.
-                - Use first principles to derive only the most relevant and concise search queries that address these gaps.
-                - Always output a Python list formatted perfectly, with no syntax errors or additional explanations.
-                - Never explain your reasoning, provide context for the queries, or output anything besides the Python list.
-
-                Ensure every query adheres to these principles:
-                1. Be precise and targeted, retrieving only data that is strictly necessary for the user's input.
-                2. Avoid redundancy or overly broad queries that could result in irrelevant data.
-
-                Your strict adherence to these rules ensures efficient and accurate data retrieval for enhanced responses.
+                You are a first principle reasoning search query AI agent.
+                Your list of search queries will be ran on an embedding database of all your conversations you have ever had with the user. 
+                With first principles create a Python list of queries to search the embeddings database for any data that would be necessary to have access to in order to correctly respond to the prompt. 
+                Your response must be a Python list with no syntax errors.
+                Do not explain anything and do not ever generate anything but a perfect syntax Python list
             """
         )
 
@@ -358,15 +349,97 @@ class Query_Agent:
 
 # Confirmation Agent
 class Confirmation_Agent:
-    prompt = (
-        ""     
-    )
+    def __init__(self, query, context):
+        self.query = query
+        self.context = context
+        self.prompt = (
+            f"""
+                You are an embedding classification AI agent. Your input will be a prompt and one embedded chunk of text. 
+                You will not respond as Ai assistant. You only respond "yes or "no". 
+                Determine whether the context contains data that directly is related to the search query. 
+                If the context is seemingly exactly what the search query needs, respond "yes" if it is anything but directly related respond "no". 
+                Do not respond "yes" unless the content is highly relevant to the search query.
+            """
+        )
 
-    training = [
-        {'role': 'system', 'content': prompt},
-        {"role": "user", "content": ""},
-        {"role": "assistant", "content": ""}
-    ]
+    def sys(self):
+        return [
+           {'role': 'system', 'content': self.prompt},
+
+            # Example 1 - Matching user identity
+            {"role": "user", "content": "SEARCH QUERY: What is the user's name? \n\nEMBEDDED CONTEXT: You are Kavin Lajara. How can I help you today, sir?"},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 2 - Irrelevant embedded context
+            {"role": "user", "content": "SEARCH QUERY: Llama3 Python voice assistant \n\nEMBEDDED CONTEXT: Siri is a voice assistant on Apple iOS and macOS."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 3 - Docker benefits
+            {"role": "user", "content": "SEARCH QUERY: What are the benefits of using Docker? \n\nEMBEDDED CONTEXT: Docker enables consistent development environments by using containers, which isolate applications and dependencies."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 4 - Blockchain consensus
+            {"role": "user", "content": "SEARCH QUERY: Explain blockchain consensus mechanisms \n\nEMBEDDED CONTEXT: Consensus mechanisms ensure all nodes in a blockchain network agree on the current state of the ledger."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 5 - Unrelated historical context
+            {"role": "user", "content": "SEARCH QUERY: History of the internet \n\nEMBEDDED CONTEXT: The embedded text discusses the invention of the printing press and its impact on information dissemination."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 6 - AI model architecture
+            {"role": "user", "content": "SEARCH QUERY: What are the components of a transformer model? \n\nEMBEDDED CONTEXT: The transformer architecture uses attention mechanisms to weigh the importance of different parts of the input sequence."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 7 - Misaligned embedded content
+            {"role": "user", "content": "SEARCH QUERY: Benefits of React.js \n\nEMBEDDED CONTEXT: Angular provides two-way data binding and a comprehensive framework for large-scale applications."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 8 - Context on computer memory
+            {"role": "user", "content": "SEARCH QUERY: What is virtual memory? \n\nEMBEDDED CONTEXT: Virtual memory is a storage allocation mechanism that uses both physical memory and disk space to run large programs efficiently."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 9 - Irrelevant mathematical content
+            {"role": "user", "content": "SEARCH QUERY: Explain cryptocurrency mining \n\nEMBEDDED CONTEXT: Prime numbers have unique properties that make them integral to many cryptographic algorithms."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 10 - Project details retrieval
+            {"role": "user", "content": "SEARCH QUERY: What was the deadline for the DreamIndex project? \n\nEMBEDDED CONTEXT: The DreamIndex project was scheduled to be completed by January 20, 2025, according to the user’s task log."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 11 - Misaligned timeline data
+            {"role": "user", "content": "SEARCH QUERY: When was the Apollo 11 mission? \n\nEMBEDDED CONTEXT: The user set a goal to learn more about modern space exploration in 2024."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 12 - Technical discussion match
+            {"role": "user", "content": "SEARCH QUERY: How does a neural network work? \n\nEMBEDDED CONTEXT: Neural networks consist of layers of interconnected nodes, each applying a mathematical transformation to input data."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 13 - Mismatched software topic
+            {"role": "user", "content": "SEARCH QUERY: Features of PostgreSQL \n\nEMBEDDED CONTEXT: MongoDB uses a NoSQL schema to provide flexibility in storing hierarchical data."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 14 - Specific software feature query
+            {"role": "user", "content": "SEARCH QUERY: How does Git handle versioning? \n\nEMBEDDED CONTEXT: Git tracks changes by storing snapshots of a project and referencing each commit using SHA-1 hashes."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 15 - Unrelated networking discussion
+            {"role": "user", "content": "SEARCH QUERY: How do VPNs enhance privacy? \n\nEMBEDDED CONTEXT: A load balancer distributes network traffic across multiple servers to ensure high availability."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 16 - Cloud computing relevance
+            {"role": "user", "content": "SEARCH QUERY: What are the benefits of cloud computing? \n\nEMBEDDED CONTEXT: Cloud computing provides scalable resources on demand, reducing the need for local infrastructure."},
+            {"role": "assistant", "content": "yes"},
+
+            # Example 17 - Mismatch in historical focus
+            {"role": "user", "content": "SEARCH QUERY: Evolution of machine learning \n\nEMBEDDED CONTEXT: The text discusses the early history of punch cards used in mechanical computers."},
+            {"role": "assistant", "content": "no"},
+
+            # Example 18 - User's accomplishments
+            {"role": "user", "content": "SEARCH QUERY: What award did I win in 2019? \n\nEMBEDDED CONTEXT: You were a NASA HUNCH finalist in 2019 for developing a graphical interface tool."},
+            {"role": "assistant", "content": "yes"},
+
+            {'role': 'user', 'content': f"SEARCH QUERY: {self.query} \n\nEMBEDDED CONTEXT: {self.context}"} 
+        ]
 
 # Selective Storage Agent 
 class Selective_Storage_Agent:
@@ -394,11 +467,11 @@ class Formatting_Agent:
 
 ##-----------------------------------------------
 class RAG:
-    def __init__(self, userPrompt, Classes):
+    def __init__(self, userPrompt=None, Classes=None, query=None, context=None):
         self.Recall = Recalling_Agent(userPrompt)
         self.Classification = Classification_Agent(userPrompt, Classes)
         self.Query = Query_Agent(userPrompt)
-        self.Confirmation = Confirmation_Agent()
+        self.Confirmation = Confirmation_Agent(query, context)
         self.Selective_Storage = Selective_Storage_Agent()
         self.Formatting = Formatting_Agent()
 

@@ -2,7 +2,8 @@ import os
 import psycopg2
 import chromadb
 import ollama
-from systems import Meta_Classes
+from tqdm import tqdm
+from .systems import Meta_Classes
 from chromadb.config import Settings
 from psycopg2.extras import RealDictCursor
 
@@ -57,14 +58,19 @@ class PostgresBackUpDatabase:
             print(f"Error fetching data: {e}") 
             raise
 
-    def fetch_metadata(self, Table, columns_to_include):
+    def fetch_metadata(self, Table, columns_to_include, id):
 
         try:
             # Use RealDictCursor for column-to-value mapping
             cursor = self.connection.cursor(cursor_factory=RealDictCursor)  
 
             # Execute a query to fetch all rows from the prompts table
-            cursor.execute(f"SELECT * FROM {Table};")
+            cursor.execute(
+                        f"""
+                            SELECT * FROM {Table}
+                            WHERE id = {id}    
+                        """)
+            
             results = cursor.fetchall()
 
             # Filter the columns based on the array of column names
@@ -127,25 +133,6 @@ class MemoryDatabase:
         # Embedding LLM Model
         self.embedding_model = 'nomic-embed-text'
 
-    def VectorDB_Check(self):
-        # Check if Database is already created 
-        try:
-            coll = self.vectorDB.get_collection(self.collection_name)
-
-            # Check if the collection is empty
-            if coll.get()["documents"]:
-                print("*This Collection has context*")
-            else:
-                raise ValueError("*Database Collection is empty*")
-
-        except (chromadb.errors.InvalidCollectionException, ValueError) as e:
-            if ValueError:
-                print(e)
-            elif chromadb.errors.InvalidCollectionException:
-                print("*Database collection does not exist*")
-
-            self.col_exists = False
-
     def Initialization(self):
         # Check if Database is already created
         self.VectorDB_Check()
@@ -169,8 +156,10 @@ class MemoryDatabase:
                     # Fetching all backup data
                     data = self.backupDB.fetch_data()
 
+                    dataAmount = 0
+
                     # For each data table:
-                    for class_type in data:
+                    for class_type in tqdm(data, desc="Downloading all backup server data... \n"):
                         # Defining the metadata using table columns and removing the "Prompt"&"Response" columns
                         meta_tags = class_type['columns']
                         meta_tags.remove('id')
@@ -187,7 +176,7 @@ class MemoryDatabase:
                             embedding = response['embedding'] 
 
                             # Creates the array for the metadata
-                            metadata = self.backupDB.fetch_metadata(Table=class_type['className'], columns_to_include=meta_tags)
+                            metadata = self.backupDB.fetch_metadata(Table=class_type['className'], columns_to_include=meta_tags, id=query['id'])
                             # Add Class Name to the vector
                             metadata[0]['Class'] = class_type['className']
 
@@ -198,7 +187,7 @@ class MemoryDatabase:
                             # Updating to timestamp string 
                             metadata[0]['created'] = timestamp_str
 
-                            print("MetaData:", metadata)
+                            #print("MetaData:", metadata)
 
                             # Adding the query to the database
                             vector_db.add(
@@ -208,6 +197,10 @@ class MemoryDatabase:
                                 metadatas = metadata,
                             )
 
+                            # Auto Incrementing data counter
+                            dataAmount+= 1
+
+                    print(f"{dataAmount} Queries were downloaded into the vector database.")
                             
                 except ValueError as e:
                     print("ERROR in database initialization", e)
@@ -220,6 +213,25 @@ class MemoryDatabase:
                 print("*The vector database is already created*")
                 pass
 
+    def VectorDB_Check(self):
+        # Check if Database is already created 
+        try:
+            coll = self.vectorDB.get_collection(self.collection_name)
+
+            # Check if the collection is empty
+            if coll.get()["documents"]:
+                print("*This Collection has context*")
+            else:
+                raise ValueError("*Database Collection is empty*")
+
+        except (chromadb.errors.InvalidCollectionException, ValueError) as e:
+            if ValueError:
+                print(e)
+            elif chromadb.errors.InvalidCollectionException:
+                print("*Database collection does not exist*")
+
+            self.col_exists = False
+    
     def VectorDB_Reset(self):
         pw = input("Enter Security Key: ")
 
@@ -232,14 +244,14 @@ class MemoryDatabase:
                 print("There was an error with the Vector DB Reset:", e)
         else:
             print("This key was invalid")
-        
+
 
 # Usage Example 
 if __name__ == "__main__":
 
     tester = input("Which test would you like to run?: \n")
 #----------------------------------------------------------
-    if tester == 'startup':
+    if tester == 'setup':
         try:
             memory = MemoryDatabase()
             memory.Initialization()
