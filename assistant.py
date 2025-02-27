@@ -8,7 +8,7 @@ import utils
 convo = utils.Conversation
 
 
-main_model = 'ATLAS'
+main_model = 'ATLAS-v2'
 agent_model = 'llama3.2'
 embedding_model = 'nomic-embed-text'
 
@@ -171,10 +171,12 @@ def Atlas_Response(prompt, stream=True):
     print(Style.RESET_ALL)
 
 ###-----------------------------------------------------------------------------------------------------------------------------------------------------###
-while True:
-    prompt = input(Fore.WHITE + 'USER: \n') # Take user input
-    print(Style.RESET_ALL)
-    memoryPrompt = Rag_Sys(prompt=prompt)
-    Atlas_Response(prompt=memoryPrompt)
+# Usage Example 
+if __name__ == "__main__":
+    while True:
+        prompt = input(Fore.WHITE + 'USER: \n') # Take user input
+        print(Style.RESET_ALL)
+        memoryPrompt = Rag_Sys(prompt=prompt)
+        Atlas_Response(prompt=memoryPrompt)
 
     
